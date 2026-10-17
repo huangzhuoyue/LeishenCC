@@ -23,6 +23,35 @@
 
 ---
 
+## 验证环境
+
+本项目的协议结论与界面均在下述设备上实测验证：
+
+| 项目 | 值 |
+| --- | --- |
+| 机型 | THUNDEROBOT R16（911 series） |
+| BIOS | AMI `TP162`（ALASKA - 1072009），发布日期 2024-06-11 |
+| 原厂控制中心版本 | **Control Center 3.0.0.22**（`ControlCenter.exe` 与 `ControlCenterDaemon.exe` 同版本） |
+| 原厂安装路径 | `C:\Program Files (x86)\Leishen\ControlCenter\` |
+| 原厂附带组件 | `CTS.exe` 1.0.0.3、`InstallerSub2.exe` 3.0.0.9、`SetPwrPlan.exe` 1.0.0.4 |
+| EC / BIOS 接口版本 | SMI 版本 `0x0200`（512），SKU `52` |
+| 本程序版本 | 1.0.0（`Leishen Control Center (Rebuild)`） |
+
+### 接口能力实测
+
+以下为 `0xFA00` 查询的实机快照（接电状态）：
+
+| 查询 | 返回 | 含义 |
+| --- | --- | --- |
+| `0x0201` 能力 | a0=`0x0200`、a2=`52` | SMI 版本 512；SKU 52 → 三风扇 + 自定义风扇可用 |
+| `0x0202` 硬件状态 | a3=`1`、a4=`1`、a5=`1`、a6=`1` | 适配器已接、摄像头状态 1；`a4==2` 判定 HSR、`a6==2` 判定 DDS |
+| `0x0203` 显示 | a2=`2`、a4=`2` | 当前独显直连（1=混合 2=独显 3=UMA） |
+| `0x0205` 风扇默认表 | a2=`4` | 默认风扇表 ID = 4 |
+
+SKU 与能力位随BIOS 版本而异：`Support3Fan` 判定为 `SKU ∈ {52, 53}`，`SupportUserFan` 判定为 `SMI 版本 ≥ 512`。
+
+---
+
 ## 硬件控制协议
 
 通道：`root\wmi` 命名空间下的 `RW_GMWMI`，通过 32 字节 `BufferBytes` 读写，即原厂 `MyWmiBase.ACPIPerformSMI`。
