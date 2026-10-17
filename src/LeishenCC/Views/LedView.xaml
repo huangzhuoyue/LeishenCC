@@ -1,0 +1,118 @@
+<UserControl x:Class="LeishenCC.Views.LedView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             FontFamily="{StaticResource UiFont}">
+    <StackPanel>
+        <TextBlock Text="键盘灯效" Style="{StaticResource H1}" />
+        <TextBlock Text="直接按灯区下发 0xFB00 / 0x0100（a2=灯区，a3=模式|亮度|RGB）。配置与原厂程序共用同一份注册表档案。"
+                   Style="{StaticResource Body}" Margin="0,4,0,18" />
+
+        <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <Grid>
+                    <TextBlock Text="灯效档案" Style="{StaticResource H2}" FontSize="14" VerticalAlignment="Center" />
+                    <Border Background="{DynamicResource ControlFill}" CornerRadius="5" Padding="1" HorizontalAlignment="Right">
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton x:Name="Prof0" Style="{StaticResource Segment}" Content="游戏" GroupName="prof" Tag="0" Checked="Prof_Checked" />
+                            <RadioButton x:Name="Prof1" Style="{StaticResource Segment}" Content="高性能" GroupName="prof" Tag="1" Checked="Prof_Checked" />
+                            <RadioButton x:Name="Prof2" Style="{StaticResource Segment}" Content="办公" GroupName="prof" Tag="2" Checked="Prof_Checked" />
+                            <RadioButton x:Name="Prof3" Style="{StaticResource Segment}" Content="自定义" GroupName="prof" Tag="3" Checked="Prof_Checked" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <Border Height="1" Background="{DynamicResource Divider}" Margin="0,12,0,12" />
+
+                <Grid>
+                    <TextBlock Text="灯区" Style="{StaticResource H2}" FontSize="14" VerticalAlignment="Center" />
+                    <Border Background="{DynamicResource ControlFill}" CornerRadius="5" Padding="1" HorizontalAlignment="Right">
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton x:Name="Zone0" Style="{StaticResource Segment}" Content="键盘区 1" GroupName="zone" Tag="0" Checked="Zone_Checked" />
+                            <RadioButton x:Name="Zone1" Style="{StaticResource Segment}" Content="键盘区 2" GroupName="zone" Tag="1" Checked="Zone_Checked" />
+                            <RadioButton x:Name="Zone2" Style="{StaticResource Segment}" Content="键盘区 3" GroupName="zone" Tag="2" Checked="Zone_Checked" />
+                            <RadioButton x:Name="Zone3" Style="{StaticResource Segment}" Content="LOGO" GroupName="zone" Tag="3" Checked="Zone_Checked" />
+                            <RadioButton x:Name="Zone4" Style="{StaticResource Segment}" Content="尾部灯带" GroupName="zone" Tag="4" Checked="Zone_Checked" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <Grid Margin="0,12,0,0">
+                    <TextBlock Text="灯效模式" Style="{StaticResource H2}" FontSize="14" VerticalAlignment="Center" />
+                    <Border Background="{DynamicResource ControlFill}" CornerRadius="5" Padding="1" HorizontalAlignment="Right">
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton x:Name="ModeOff" Style="{StaticResource Segment}" Content="关闭" GroupName="mode" Tag="0" Checked="Mode_Checked" />
+                            <RadioButton x:Name="ModeStatic" Style="{StaticResource Segment}" Content="常亮" GroupName="mode" Tag="1" Checked="Mode_Checked" />
+                            <RadioButton x:Name="ModeBreath" Style="{StaticResource Segment}" Content="呼吸" GroupName="mode" Tag="3" Checked="Mode_Checked" />
+                            <RadioButton x:Name="ModeCycle" Style="{StaticResource Segment}" Content="彩色循环" GroupName="mode" Tag="6" Checked="Mode_Checked" />
+                            <RadioButton x:Name="ModeAmbi" Style="{StaticResource Segment}" Content="氛围灯" GroupName="mode" Tag="7" Checked="Mode_Checked" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <Grid Margin="0,14,0,0">
+                    <TextBlock Text="亮度" Style="{StaticResource Body}" VerticalAlignment="Center" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Width="320">
+                        <Slider x:Name="Bright" Style="{StaticResource FlatSlider}" Minimum="0" Maximum="15"
+                                IsSnapToTickEnabled="True" TickFrequency="1" ValueChanged="Bright_Changed" Width="260" />
+                        <TextBlock x:Name="BrightText" Text="15" Style="{StaticResource Body}" Width="40"
+                                   TextAlignment="Right" VerticalAlignment="Center" FontFamily="{StaticResource NumFont}" />
+                    </StackPanel>
+                </Grid>
+
+                <Border Height="1" Background="{DynamicResource Divider}" Margin="0,12,0,12" />
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Margin="0,0,20,0">
+                        <Grid>
+                            <TextBlock Text="R" Style="{StaticResource Caption}" Width="16" />
+                            <Slider x:Name="SlideR" Style="{StaticResource FlatSlider}" Minimum="0" Maximum="255"
+                                    Margin="24,0,50,0" ValueChanged="Rgb_Changed" />
+                            <TextBlock x:Name="TextR" Text="255" Style="{StaticResource Caption}" HorizontalAlignment="Right"
+                                       VerticalAlignment="Center" FontFamily="{StaticResource NumFont}" />
+                        </Grid>
+                        <Grid Margin="0,8,0,0">
+                            <TextBlock Text="G" Style="{StaticResource Caption}" Width="16" />
+                            <Slider x:Name="SlideG" Style="{StaticResource FlatSlider}" Minimum="0" Maximum="255"
+                                    Margin="24,0,50,0" ValueChanged="Rgb_Changed" />
+                            <TextBlock x:Name="TextG" Text="255" Style="{StaticResource Caption}" HorizontalAlignment="Right"
+                                       VerticalAlignment="Center" FontFamily="{StaticResource NumFont}" />
+                        </Grid>
+                        <Grid Margin="0,8,0,0">
+                            <TextBlock Text="B" Style="{StaticResource Caption}" Width="16" />
+                            <Slider x:Name="SlideB" Style="{StaticResource FlatSlider}" Minimum="0" Maximum="255"
+                                    Margin="24,0,50,0" ValueChanged="Rgb_Changed" />
+                            <TextBlock x:Name="TextB" Text="255" Style="{StaticResource Caption}" HorizontalAlignment="Right"
+                                       VerticalAlignment="Center" FontFamily="{StaticResource NumFont}" />
+                        </Grid>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Width="132">
+                        <Border x:Name="Preview" Height="64" CornerRadius="6" BorderBrush="{DynamicResource Border}" BorderThickness="1" />
+                        <TextBox x:Name="HexBox" Style="{StaticResource Input}" Margin="0,8,0,0" TextChanged="HexBox_Changed" />
+                        <TextBlock Text="RRGGBB" Style="{StaticResource Caption}" Margin="2,3,0,0" />
+                    </StackPanel>
+                </Grid>
+
+                <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                    <Button x:Name="BtnSwatch" Content="白色" Style="{StaticResource SubtleButton}" Padding="10,4" Margin="0,0,6,0" Tag="FFFFFF" Click="Swatch_Click" />
+                    <Button Content="红色" Style="{StaticResource SubtleButton}" Padding="10,4" Margin="0,0,6,0" Tag="FF0000" Click="Swatch_Click" />
+                    <Button Content="绿色" Style="{StaticResource SubtleButton}" Padding="10,4" Margin="0,0,6,0" Tag="00FF00" Click="Swatch_Click" />
+                    <Button Content="蓝色" Style="{StaticResource SubtleButton}" Padding="10,4" Margin="0,0,6,0" Tag="0000FF" Click="Swatch_Click" />
+                    <Button Content="青色" Style="{StaticResource SubtleButton}" Padding="10,4" Margin="0,0,6,0" Tag="00FFFF" Click="Swatch_Click" />
+                    <Button Content="洋红" Style="{StaticResource SubtleButton}" Padding="10,4" Margin="0,0,6,0" Tag="FF0080" Click="Swatch_Click" />
+                    <Button Content="琥珀" Style="{StaticResource SubtleButton}" Padding="10,4" Margin="0,0,6,0" Tag="FFAA00" Click="Swatch_Click" />
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                    <Button x:Name="BtnApply" Content="应用当前灯区" Style="{StaticResource AccentButton}" Click="Apply_Click" />
+                    <Button x:Name="BtnApplyAll" Content="应用到全部灯区" Style="{StaticResource SubtleButton}" Margin="8,0,0,0" Click="ApplyAll_Click" />
+                    <TextBlock x:Name="Result" Style="{StaticResource Caption}" Margin="12,0,0,0" VerticalAlignment="Center" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

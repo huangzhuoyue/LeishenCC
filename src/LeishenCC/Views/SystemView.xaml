@@ -1,0 +1,91 @@
+<UserControl x:Class="LeishenCC.Views.SystemView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             FontFamily="{StaticResource UiFont}">
+    <StackPanel>
+        <TextBlock Text="系统设置" Style="{StaticResource H1}" />
+        <TextBlock Text="这些开关同样走 EC 与 PnP，等价于原厂控制中心的系统页。"
+                   Style="{StaticResource Body}" Margin="0,4,0,18" />
+
+        <Border Style="{StaticResource Card}">
+            <Grid>
+                <StackPanel>
+                        <TextBlock Text="屏蔽 Windows 键" Style="{StaticResource H2}" FontSize="14" />
+                        <TextBlock Text="游戏时防止误触。开关打开 = 屏蔽，下发 0xFB00 / 0x0200 · a6=1；关闭 = 恢复，a6=0。"
+                                   Style="{StaticResource Caption}" Margin="0,4,0,0" />
+                </StackPanel>
+                <ToggleButton x:Name="WinKeySwitch" Style="{StaticResource Switch}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+            </Grid>
+        </Border>
+
+        <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+            <Grid>
+                <StackPanel>
+                    <TextBlock Text="摄像头开关" Style="{StaticResource H2}" FontSize="14" />
+                    <TextBlock x:Name="CameraText" Style="{StaticResource Caption}" Margin="0,4,0,0" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Button x:Name="BtnCamOn" Content="启用" Style="{StaticResource SubtleButton}" Margin="0,0,8,0" Click="CamOn_Click" />
+                    <Button x:Name="BtnCamOff" Content="禁用" Style="{StaticResource SubtleButton}" Click="CamOff_Click" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+            <StackPanel>
+                <Grid>
+                    <StackPanel>
+                        <TextBlock Text="关闭窗口时最小化到托盘" Style="{StaticResource H2}" FontSize="14" />
+                        <TextBlock Text="关闭后程序仍在托盘运行，可继续维持自定义风扇与灯效。" Style="{StaticResource Caption}" Margin="0,4,0,0" />
+                    </StackPanel>
+                    <ToggleButton x:Name="TraySwitch" Style="{StaticResource Switch}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                </Grid>
+                <Border Height="1" Background="{DynamicResource Divider}" Margin="0,12,0,12" />
+                <Grid>
+                    <StackPanel>
+                        <TextBlock Text="恢复默认灯效" Style="{StaticResource H2}" FontSize="14" />
+                        <TextBlock Text="把四个灯效档案写回原厂默认值（游戏紫色、高性能红色、办公多彩、自定义青色）。" Style="{StaticResource Caption}" Margin="0,4,0,0" />
+                    </StackPanel>
+                    <Button Content="恢复" Style="{StaticResource SubtleButton}" HorizontalAlignment="Right" VerticalAlignment="Center" Click="ResetLed_Click" />
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+            <StackPanel>
+                <Grid>
+                    <StackPanel>
+                        <TextBlock Text="监听 Fn 组合键" Style="{StaticResource H2}" FontSize="14" />
+                        <TextBlock Text="监听 root\wmi:GMC_WMIEvent 的 EventDetail（32 字节），复刻原厂守护进程的 Fn 键响应。"
+                                   Style="{StaticResource Caption}" Margin="0,4,0,0" />
+                    </StackPanel>
+                    <ToggleButton x:Name="FnSwitch" Style="{StaticResource Switch}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                </Grid>
+
+                <Border Height="1" Background="{DynamicResource Divider}" Margin="0,12,0,12" />
+
+                <TextBlock Text="按键与事件位对应（EventDetail）" Style="{StaticResource H2}" FontSize="14" />
+                <TextBlock Text="[0] 背光   [4] 外接显示   [5] 适配器   [6] 摄像头   [7] 性能模式键   [8] 控制中心键"
+                           Style="{StaticResource Caption}" Margin="0,4,0,0" FontFamily="{StaticResource NumFont}" />
+                <TextBlock x:Name="FnText" Text="最近按键：暂无" Style="{StaticResource Caption}" Margin="0,8,0,0"
+                           FontFamily="{StaticResource NumFont}" TextWrapping="Wrap" />
+
+                <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                    <Button Content="模拟性能键" Style="{StaticResource SubtleButton}" Click="FnPerf_Click" />
+                    <Button Content="模拟控制中心键" Style="{StaticResource SubtleButton}" Margin="8,0,0,0" Click="FnCc_Click" />
+                    <Button Content="模拟摄像头键" Style="{StaticResource SubtleButton}" Margin="8,0,0,0" Click="FnCam_Click" />
+                    <Button Content="模拟背光+" Style="{StaticResource SubtleButton}" Margin="8,0,0,0" Click="FnLight_Click" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+            <StackPanel>
+                <TextBlock Text="设备信息" Style="{StaticResource H2}" FontSize="14" />
+                <TextBlock x:Name="InfoText" Style="{StaticResource Caption}" Margin="0,8,0,0" FontFamily="{StaticResource NumFont}" />
+            </StackPanel>
+        </Border>
+
+        <TextBlock x:Name="Result" Style="{StaticResource Caption}" Margin="2,10,0,0" />
+    </StackPanel>
+</UserControl>

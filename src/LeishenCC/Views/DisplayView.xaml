@@ -1,0 +1,71 @@
+<UserControl x:Class="LeishenCC.Views.DisplayView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             FontFamily="{StaticResource UiFont}">
+    <StackPanel>
+        <TextBlock Text="显卡与显示" Style="{StaticResource H1}" />
+        <TextBlock Text="切换 BIOS 显示输出通路（0xFB00 / 0x0203），需要重启才会生效。改动前请保存工作。"
+                   Style="{StaticResource Body}" Margin="0,4,0,18" />
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <RadioButton x:Name="ModeHybrid" Grid.Column="0" Style="{StaticResource SelectCard}" GroupName="dp" Tag="1" Checked="Mode_Checked">
+                <StackPanel>
+                    <TextBlock Text="混合输出" Style="{StaticResource H2}" FontSize="16" />
+                    <TextBlock Text="核显输出画面、独显负责渲染，省电且兼容性好。" Style="{StaticResource Caption}" Margin="0,6,0,0" />
+                    <TextBlock Text="0xFB00 / 0x0203 · a2=1" Style="{StaticResource Caption}" Margin="0,10,0,0" />
+                </StackPanel>
+            </RadioButton>
+
+            <RadioButton x:Name="ModeDiscrete" Grid.Column="2" Style="{StaticResource SelectCard}" GroupName="dp" Tag="2" Checked="Mode_Checked">
+                <StackPanel>
+                    <TextBlock Text="独显直连" Style="{StaticResource H2}" FontSize="16" />
+                    <TextBlock Text="画面直出独显，游戏帧数最高，续航下降。" Style="{StaticResource Caption}" Margin="0,6,0,0" />
+                    <TextBlock Text="0xFB00 / 0x0203 · a2=2" Style="{StaticResource Caption}" Margin="0,10,0,0" />
+                </StackPanel>
+            </RadioButton>
+
+            <RadioButton x:Name="ModeUma" Grid.Column="4" Style="{StaticResource SelectCard}" GroupName="dp" Tag="3" Checked="Mode_Checked">
+                <StackPanel>
+                    <TextBlock Text="核显模式（UMA）" Style="{StaticResource H2}" FontSize="16" />
+                    <TextBlock Text="关闭独显，最省电；切回需重启。" Style="{StaticResource Caption}" Margin="0,6,0,0" />
+                    <TextBlock Text="0xFB00 / 0x0203 · a2=3" Style="{StaticResource Caption}" Margin="0,10,0,0" />
+                </StackPanel>
+            </RadioButton>
+        </Grid>
+
+        <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+            <StackPanel>
+                <TextBlock Text="面板刷新率（HSR）" Style="{StaticResource H2}" FontSize="14" />
+                <TextBlock x:Name="HsrHint" Style="{StaticResource Caption}" Margin="0,4,0,10" />
+                <StackPanel Orientation="Horizontal">
+                    <Border Background="{DynamicResource ControlFill}" CornerRadius="5" Padding="1">
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton x:Name="Hsr1" Style="{StaticResource Segment}" Content="模式 1" GroupName="hsr" Tag="1" Checked="Hsr_Checked" />
+                            <RadioButton x:Name="Hsr2" Style="{StaticResource Segment}" Content="模式 2" GroupName="hsr" Tag="2" Checked="Hsr_Checked" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+            <Grid>
+                <StackPanel>
+                    <TextBlock Text="当前通路" Style="{StaticResource H2}" FontSize="14" />
+                    <TextBlock x:Name="StateText" Style="{StaticResource Caption}" Margin="0,6,0,0" />
+                </StackPanel>
+                <Button x:Name="BtnReboot" Content="立即重启" Style="{StaticResource SubtleButton}" HorizontalAlignment="Right" VerticalAlignment="Center" Click="Reboot_Click" />
+            </Grid>
+        </Border>
+
+        <TextBlock x:Name="Result" Style="{StaticResource Caption}" Margin="2,10,0,0" />
+    </StackPanel>
+</UserControl>

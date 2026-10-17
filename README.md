@@ -1,0 +1,140 @@
+# 雷神控制中心 · 重建版（LeishenCC）
+
+从零复刻的雷神（Leishen）笔记本控制中心桌面程序，Windows 11 原生风格 WPF 实现。
+
+原厂 `ControlCenter` 的硬件控制协议通过逆向分析还原，本仓库只包含**自行编写的代码**，不含任何第三方程序的反编译产物。
+
+---
+
+## 特性
+
+| 页面 | 功能 |
+| --- | --- |
+| 概览 | CPU/GPU/内存实时指标、当前状态汇总、可选指标的历史趋势折线图（1/3/5 分钟） |
+| 性能模式 | 高性能 / 游戏 / 办公静音切换，可联动 Windows 电源计划、开机自启 |
+| 风扇与散热 | 3 档位 × CPU/GPU/系统 三路风扇曲线编辑，可拖动折点，按温度自动下发占空比 |
+| 键盘灯效 | 4 套灯效档案 × 5 个灯区，模式/亮度/RGB 与预设色 |
+| 显卡与显示 | 混合输出 / 独显直连 / 核显切换，HSR 刷新率切换 |
+| 系统设置 | Win 键屏蔽、摄像头启停、Fn 组合键监听、托盘与主题 |
+| 接口诊断 | 原始 SMI 命令收发（a0–a6 十六进制输入）与调用日志 |
+
+- **Fn 组合键监听**：复刻原厂守护进程行为，监听 `root\wmi:GMC_WMIEvent`，响应性能模式键、控制中心键、摄像头键与背光键。
+- **界面**：Fluent / OpenFRP 风格的侧边栏（主区菜单 + 底区分页），可收起为仅图标；页面切换淡入动效；沉浸式无边框标题栏与覆盖式细滚动条；深浅双主题。
+
+---
+
+## 硬件控制协议
+
+通道：`root\wmi` 命名空间下的 `RW_GMWMI`，通过 32 字节 `BufferBytes` 读写，即原厂 `MyWmiBase.ACPIPerformSMI`。
+
+结构体（小端）：`a0(2) a1(2) a2(4) a3(4) a4(4) a5(4) a6(4) rev0(4) rev1(4)`。
+方向位：`a0 = 0xFA00`（GET，64000）/ `0xFB00`（SET，64256）。
+
+### GET (`0xFA00`)
+
+| a1 | 含义 | 返回 |
+| --- | --- | --- |
+| `0x0100` | LED 状态 | — |
+| `0x0200` | 温度与转速 | a2=CPU 温度 a3=GPU 温度 a4=CPU 转速 a5=GPU 转速 |
+| `0x0201` | 能力查询 | a0=SMI 版本 a2=SKU |
+| `0x0202` | 硬件状态 | a3=适配器 a4=HSR(==2) a5=摄像头 a6=DDS(==2) |
+| `0x0203` | 显示状态 | a2=当前 a3=HDMI a4=初始 |
+| `0x0204` | HSR | — |
+| `0x0205` | 风扇默认表 ID | — |
+| `0x0206` | 自定义风扇状态 | a2=1 开启 |
+| `0x0207` | 系统温度/风扇 | a2=温度 a3=转速 |
+
+### SET (`0xFB00`)
+
+| a1 | 含义 | 参数 |
+| --- | --- | --- |
+| `0x0100` | LED 设置 | a2=灯区 a3=LED 数据 |
+| `0x0200` | Win 键 | a6=1 屏蔽 a6=0 恢复 |
+| `0x0203` | 显示模式 | a2: 1=混合 2=独显 3=UMA |
+| `0x0204` | HSR | a2=档位 |
+| `0x0205` | 风扇转速 | a2=CPU% a3=GPU% a4=SYS% |
+| `0x0206` | 风扇控制开关 | a2=1/0 |
+| `0x0300` | 性能模式 | a2: 0=高性能 1=游戏 2=办公 |
+| `0x0400` | 事件清除 | a2=性能键 a3=控制中心键 a4=摄像头键 |
+
+### LED 数据位域
+
+```
+bit31..28  模式（0 关闭 / 1 常亮 / 3 呼吸 / 6 彩色循环 / 7 氛围灯）
+bit27..24  亮度 0-15
+bit23..16  R
+bit15..8   G
+bit7..0    B
+```
+灯区：5=键盘区1、4=键盘区2、3=键盘区3、8=LOGO、7=尾部灯带。
+
+### Fn 组合键事件
+
+事件类 `root\wmi:GMC_WMIEvent`，负载 `EventDetail` 为 32 字节：
+
+| 字节 | 含义 |
+| --- | --- |
+| `[0]` | 键盘背光亮度（0-15） |
+| `[4]` | ==1 外接显示事件 |
+| `[5]` | ==159 电源适配器事件 |
+| `[6]` | 摄像头（1=开 / 2=关） |
+| `[7]` | 性能模式键 |
+| `[8]` | 控制中心键 |
+
+处理完必须下发 `0xFB00/0x0400` 清事件，否则 EC 会一直挂起该事件。
+
+### 风扇曲线
+
+8 个温度断点 `30/40/50/60/70/80/90/100 ℃`，注册表中存为 `30,30,30,30,50,60,70,100` 形式的逗号串，双风扇用 `;` 分隔 CPU/GPU，系统风扇单独存 `UserFan*_SYS`。
+
+### 注册表
+
+与原厂共用 `HKLM\SOFTWARE\WOW6432Node\LeiShen\ControlCenter`（`Game`/`HighPerformance`/`PowerSaving`/`Custom`/`LEDModule`/`WinKey`/`FanControlStatus`/`FanControlSelect`/`UserFan*`）；本程序自身的界面偏好存 `HKCU\SOFTWARE\LeishenCC`。
+
+---
+
+## 构建
+
+需要 .NET 5 SDK（Windows）。
+
+```bash
+cd src/LeishenCC
+dotnet build -c Release
+```
+
+产物：`src/LeishenCC/bin/Release/net5.0-windows/LeishenCC.exe`。程序清单带 `requireAdministrator`，写入 EC / 注册表需要管理员权限。
+
+自检用命令行参数：
+
+| 参数 | 作用 |
+| --- | --- |
+| `--shot <目录> [light]` | 逐页自渲染截图，用于界面回归 |
+| `--fnprobe <秒数>` | 抓 Fn 组合键原始事件，写入 `fnprobe.log` |
+
+---
+
+## 目录结构
+
+```
+src/LeishenCC/
+  Core/        GmWmi（SMI 协议）、Settings、LedData、FanProfile、Nvml、
+               CameraService、PowerPlanService、SystemStats、Hub、
+               FnKeys / FnKeyService（Fn 事件）、SampleHistory（采样历史）
+  Views/       七个功能页 + CurveEditor + TrendChart
+  Theme/       Dark / Light 配色与公共样式
+  MainWindow.xaml(.cs)
+tools/Decomp/  自建的反编译 CLI（ICSharpCode.Decompiler），用于还原原厂结构
+```
+
+## 状态刷新机制
+
+- 1 秒快刷新：温度 / 占用 / 转速，并写入采样历史。
+- 5 秒慢刷新：重读显示输出、风扇控制、摄像头与性能模式，与上次快照比对，变化才刷新界面（对应原厂 `timer2` 5 秒 tick）。
+- 切页、从托盘恢复、Fn 键切换模式时立即补一次刷新。
+- 页面事件订阅采用 `Loaded`/`Unloaded` 成对方式，切页回来后不会停止刷新。
+
+---
+
+## 免责声明
+
+本项目仅用于个人设备上的学习与自用，不包含、也不分发任何第三方程序的代码或二进制文件。硬件协议结论来自对本人设备上接口的观测与实机验证，不同机型/BIOS 版本可能存在差异。修改风扇曲线、功耗与显示输出存在风险，请自行评估。

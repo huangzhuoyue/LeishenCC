@@ -1,0 +1,12 @@
+<UserControl x:Class="LeishenCC.Views.CurveEditor"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             FontFamily="{StaticResource UiFont}">
+    <Grid>
+        <Canvas x:Name="Plot" Height="208" Background="Transparent"
+                MouseLeftButtonDown="Plot_MouseDown"
+                MouseMove="Plot_MouseMove"
+                MouseLeftButtonUp="Plot_MouseUp"
+                Cursor="Hand" />
+    </Grid>
+</UserControl>

@@ -1,0 +1,24 @@
+# 第三方专有软件反编译产物：不入库
+decomp/
+decomp_openfrp/
+
+# 构建输出
+[Bb]in/
+[Oo]bj/
+out_shot/
+out_dbg/
+out_admin/
+shots/
+shots_nav/
+shots_light/
+
+# 日志与本地调试产物
+*.log
+layout*.txt
+
+# IDE / 系统
+.vs/
+.vscode/
+*.suo
+*.user
+Thumbs.db

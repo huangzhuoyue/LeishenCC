@@ -1,0 +1,64 @@
+<UserControl x:Class="LeishenCC.Views.FanView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:v="clr-namespace:LeishenCC.Views"
+             FontFamily="{StaticResource UiFont}">
+    <StackPanel>
+        <TextBlock Text="风扇与散热" Style="{StaticResource H1}" />
+        <TextBlock Text="曲线写入 EC（0xFB00 / 0x0205），由本程序按温度轮询下发；关闭后交回 BIOS 自动策略。"
+                   Style="{StaticResource Body}" Margin="0,4,0,18" />
+
+        <Border Style="{StaticResource Card}">
+            <Grid>
+                <StackPanel>
+                    <TextBlock Text="自定义风扇曲线" Style="{StaticResource H2}" FontSize="14" />
+                    <TextBlock x:Name="FanHint" Style="{StaticResource Caption}" Margin="0,4,0,0" />
+                </StackPanel>
+                <ToggleButton x:Name="FanSwitch" Style="{StaticResource Switch}"
+                              HorizontalAlignment="Right" VerticalAlignment="Center" />
+            </Grid>
+        </Border>
+
+        <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+            <StackPanel>
+                <Grid>
+                    <TextBlock Text="编辑档位" Style="{StaticResource H2}" FontSize="14" VerticalAlignment="Center" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Border Background="{DynamicResource ControlFill}" CornerRadius="5" Padding="1">
+                            <StackPanel Orientation="Horizontal">
+                                <RadioButton x:Name="Slot1" Style="{StaticResource Segment}" Content="档位 1" GroupName="slot" Tag="0" Checked="Slot_Checked" />
+                                <RadioButton x:Name="Slot2" Style="{StaticResource Segment}" Content="档位 2" GroupName="slot" Tag="1" Checked="Slot_Checked" />
+                                <RadioButton x:Name="Slot3" Style="{StaticResource Segment}" Content="档位 3" GroupName="slot" Tag="2" Checked="Slot_Checked" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+
+                <Grid Margin="0,14,0,0">
+                    <StackPanel Orientation="Horizontal">
+                        <Border Background="{DynamicResource ControlFill}" CornerRadius="5" Padding="1">
+                            <StackPanel Orientation="Horizontal">
+                                <RadioButton x:Name="FanCpu" Style="{StaticResource Segment}" Content="CPU 风扇" GroupName="fansel" Tag="0" Checked="FanSel_Checked" />
+                                <RadioButton x:Name="FanGpu" Style="{StaticResource Segment}" Content="GPU 风扇" GroupName="fansel" Tag="1" Checked="FanSel_Checked" />
+                                <RadioButton x:Name="FanSys" Style="{StaticResource Segment}" Content="系统风扇" GroupName="fansel" Tag="2" Checked="FanSel_Checked" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                    <TextBlock x:Name="LiveText" Style="{StaticResource Caption}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                </Grid>
+
+                <v:CurveEditor x:Name="Editor" Margin="0,10,0,0" />
+
+                <Grid Margin="0,6,0,0">
+                    <TextBlock x:Name="ValuesText" Style="{StaticResource Caption}" FontFamily="{StaticResource NumFont}" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button x:Name="BtnDefault" Content="恢复默认" Style="{StaticResource SubtleButton}" Margin="0,0,8,0" Click="BtnDefault_Click" />
+                        <Button x:Name="BtnApply" Content="保存并应用" Style="{StaticResource AccentButton}" Click="BtnApply_Click" />
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <TextBlock x:Name="Result" Style="{StaticResource Caption}" Margin="2,10,0,0" />
+    </StackPanel>
+</UserControl>

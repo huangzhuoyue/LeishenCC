@@ -1,0 +1,67 @@
+<UserControl x:Class="LeishenCC.Views.PerformanceView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             FontFamily="{StaticResource UiFont}">
+    <StackPanel>
+        <TextBlock Text="性能模式" Style="{StaticResource H1}" />
+        <TextBlock Text="通过 EC 下发 0xFB00 / 0x0300 切换整机功耗与风扇策略，立即生效。"
+                   Style="{StaticResource Body}" Margin="0,4,0,18" />
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <RadioButton x:Name="ModeHigh" Grid.Column="0" Style="{StaticResource SelectCard}" GroupName="pm" Checked="Mode_Checked" Tag="0">
+                <StackPanel>
+                    <TextBlock Text="高性能" Style="{StaticResource H2}" FontSize="16" />
+                    <TextBlock Text="风扇与功耗墙拉到最高，适合长时间渲染、编译。" Style="{StaticResource Caption}" Margin="0,6,0,0" />
+                    <TextBlock Text="0xFB00 / 0x0300 · a2=0" Style="{StaticResource Caption}" Margin="0,10,0,0" />
+                </StackPanel>
+            </RadioButton>
+
+            <RadioButton x:Name="ModeGame" Grid.Column="2" Style="{StaticResource SelectCard}" GroupName="pm" Checked="Mode_Checked" Tag="1">
+                <StackPanel>
+                    <TextBlock Text="游戏" Style="{StaticResource H2}" FontSize="16" />
+                    <TextBlock Text="CPU/GPU 均衡，风扇曲线略偏激进，兼顾噪音。" Style="{StaticResource Caption}" Margin="0,6,0,0" />
+                    <TextBlock Text="0xFB00 / 0x0300 · a2=1" Style="{StaticResource Caption}" Margin="0,10,0,0" />
+                </StackPanel>
+            </RadioButton>
+
+            <RadioButton x:Name="ModeOffice" Grid.Column="4" Style="{StaticResource SelectCard}" GroupName="pm" Checked="Mode_Checked" Tag="2">
+                <StackPanel>
+                    <TextBlock Text="办公 / 静音" Style="{StaticResource H2}" FontSize="16" />
+                    <TextBlock Text="限制功耗、转速更平缓，办公与影音优先。" Style="{StaticResource Caption}" Margin="0,6,0,0" />
+                    <TextBlock Text="0xFB00 / 0x0300 · a2=2" Style="{StaticResource Caption}" Margin="0,10,0,0" />
+                </StackPanel>
+            </RadioButton>
+        </Grid>
+
+        <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+            <StackPanel>
+                <Grid>
+                    <StackPanel>
+                        <TextBlock Text="同时切换 Windows 电源计划" Style="{StaticResource H2}" FontSize="14" />
+                        <TextBlock x:Name="PlanHint" Style="{StaticResource Caption}" Margin="0,4,0,0" />
+                    </StackPanel>
+                    <ToggleButton x:Name="PlanSwitch" Style="{StaticResource Switch}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                </Grid>
+                <Border Height="1" Background="{DynamicResource Divider}" Margin="0,12,0,12" />
+                <Grid>
+                    <StackPanel>
+                        <TextBlock Text="开机自启" Style="{StaticResource H2}" FontSize="14" />
+                        <TextBlock Text="在当前用户登录时自动运行（管理员权限会触发一次 UAC 提示）。" Style="{StaticResource Caption}" Margin="0,4,0,0" />
+                    </StackPanel>
+                    <ToggleButton x:Name="StartupSwitch" Style="{StaticResource Switch}" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                  Checked="Startup_Changed" Unchecked="Startup_Changed" />
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <TextBlock x:Name="Result" Style="{StaticResource Caption}" Margin="2,12,0,0" />
+    </StackPanel>
+</UserControl>
