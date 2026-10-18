@@ -11,11 +11,11 @@
 | 页面 | 功能 |
 | --- | --- |
 | 概览 | CPU/GPU/内存实时指标、当前状态汇总、可选指标的历史趋势折线图（1/3/5 分钟） |
-| 性能模式 | 高性能 / 游戏 / 办公静音切换，可联动 Windows 电源计划、开机自启 |
+| 性能模式 | 高性能 / 游戏 / 办公静音切换，可联动 Windows 电源计划 |
 | 风扇与散热 | 3 档位 × CPU/GPU/系统 三路风扇曲线编辑，可拖动折点；**常驻每 2 秒按曲线下发，与窗口是否可见无关** |
 | 键盘灯效 | 4 套灯效档案 × 5 个灯区，模式/亮度/RGB 与预设色 |
 | 显卡与显示 | 混合输出 / 独显直连 / 核显切换，HSR 刷新率切换 |
-| 系统设置 | Win 键屏蔽、摄像头启停、Fn 组合键监听、托盘与主题 |
+| 系统设置 | **开机自启（计划任务替代原厂）**、Win 键屏蔽、摄像头启停、Fn 组合键监听、托盘与主题 |
 | 接口诊断 | 原始 SMI 命令收发（a0–a6 十六进制输入）与调用日志 |
 
 - **Fn 组合键监听**：复刻原厂守护进程行为，监听 `root\wmi:GMC_WMIEvent`，响应性能模式键、控制中心键、摄像头键与背光键。
@@ -195,12 +195,14 @@ MCP 客户端配置（`mcpServers` 格式）：
 src/LeishenCC/
   Core/        GmWmi（SMI 协议）、Settings、LedData、FanProfile、Nvml、
                CameraService、PowerPlanService、SystemStats、Hub、
-               FnKeys / FnKeyService（Fn 事件）、SampleHistory（采样历史）
+               FnKeys / FnKeyService（Fn 事件）、SampleHistory（采样历史）、
+               FanControlService（常驻风扇下发）、StartupTask（开机自启接管）
   Views/       七个功能页 + CurveEditor + TrendChart
   Theme/       Dark / Light 配色与公共样式
   MainWindow.xaml(.cs)
-tools/Decomp/  自建的反编译 CLI（ICSharpCode.Decompiler），用于还原原厂结构
-tools/FanMcp/  本地 MCP 服务（stdio），把风扇曲线控制暴露给 agent
+tools/Decomp/         自建的反编译 CLI（ICSharpCode.Decompiler），用于还原原厂结构
+tools/FanMcp/         本地 MCP 服务（stdio），把风扇曲线控制暴露给 agent
+tools/StartupProbe/   自启诊断（复用 StartupTask，只读检查或 --enable/--disable）
 ```
 
 ## 状态刷新机制
@@ -221,6 +223,38 @@ tools/FanMcp/  本地 MCP 服务（stdio），把风扇曲线控制暴露给 age
 - 连续 5 次下发失败自动交回 BIOS，不会锁死在错误占空比。
 - **程序退出时自动 `SetFanControl(false)` 交回 BIOS**，避免把风扇锁在最后的设定值。
 - 与外部 `LeishenFanMcp --hold` 用 `Local\LeishenFanOwner` 互斥，谁先接管谁生效。
+
+---
+
+## 开机自启：替代原厂控制中心（`Core/StartupTask`）
+
+原厂的登录自启不是 Run 键，而是一个计划任务：
+
+```
+\ControlCenter\ControlCenter  →  ControlCenterDaemon.exe /1
+                                LogonTrigger · RunLevel=HighestAvailable
+```
+
+重置版沿用同一机制（`系统设置 → 开机自启`）：
+
+- **接管**：注册 `\LeishenCC` 计划任务（登录触发、`HighestAvailable`、延迟 8 秒、带 `--startup` 参数），并把原厂任务 `Enabled=false`。
+- **取消**：删除 `\LeishenCC`，把原厂任务恢复为启用。所有操作可逆，原任务定义另外备份在 `backup/ControlCenter.task.xml`。
+
+为什么不用 `HKCU\...\Run`：本程序是 `requireAdministrator` 清单，走 Run 键每次登录都会弹一次 UAC；计划任务用 `HighestAvailable + InteractiveToken`，登录时静默提权，不弹窗。旧版本写过的 Run 键会在接管/取消时自动清掉。
+
+启动参数：
+
+| 参数 | 行为 |
+|---|---|
+| `--startup` | 不显示主窗口，直接驻留托盘（计划任务使用），并弹一次托盘提示 |
+| （无参数） | 正常显示窗口 |
+
+配套细节：
+
+- **单实例**：`Local\LeishenCC.App` 互斥量；重复启动会通过命名事件 `Local\LeishenCC.Show` 让已有实例把窗口显示出来，而不是开出第二个托盘图标。
+- **路径自愈**：程序被移动或重新构建后，若任务里记录的 exe 路径与当前不一致，启动时自动按当前路径重新注册。
+- **状态三态**：任务状态分「启用 / 禁用 / 不存在 / 读不到」；非管理员读不到 `\ControlCenter\` 文件夹时会如实提示，不会误判成「未启用」。
+- 自检：`tools/StartupProbe`（编译后运行，输出 `startupprobe.log`；`--enable` / `--disable` 可直接执行接管/恢复）。
 
 ---
 

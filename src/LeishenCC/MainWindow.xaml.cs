@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -59,6 +60,7 @@ namespace LeishenCC
 
             Hub.Poll();
             SetupTray();
+            ListenShowRequests();
 
             // Fn 组合键：控制中心键拉起窗口，性能模式键弹提示
             FnKeyService.ActivateRequested += OnFnActivate;
@@ -98,6 +100,29 @@ namespace LeishenCC
                 ? Geometry.Parse("M4.2 6.2 H15.8 V17.8 H4.2 Z M6.2 6.2 V4.2 H17.8 V15.8 H15.8")
                 : Geometry.Parse("M4.5 4.5 h15 v15 h-15 Z");
             BtnMax.ToolTip = WindowState == WindowState.Maximized ? "向下还原" : "最大化";
+        }
+
+        /// <summary>
+        /// 监听"再来一个实例"的请求：开机自启在托盘常驻时，用户又双击了 exe，
+        /// 由 App 的单实例互斥拦下新进程，并通过命名事件让本实例把窗口显示出来。
+        /// </summary>
+        private void ListenShowRequests()
+        {
+            if (App.ShowEvent == null) return;
+            var th = new Thread(() =>
+            {
+                while (true)
+                {
+                    try
+                    {
+                        if (!App.ShowEvent.WaitOne()) break;
+                        Dispatcher.BeginInvoke(new Action(Restore));
+                    }
+                    catch { break; }
+                }
+            })
+            { IsBackground = true, Name = "show-request" };
+            th.Start();
         }
 
         private void SetupTray()
@@ -173,6 +198,24 @@ namespace LeishenCC
                 _tray.Visible = false;
                 _tray.Dispose();
             }
+
+            // ShutdownMode 是 OnExplicitShutdown（托盘常驻需要），
+            // 所以用户真正关窗时要显式退出，否则会留下一个没有窗口的进程。
+            if (!Hub.AppExiting && !_exiting)
+            {
+                Application.Current.Shutdown();
+            }
+        }
+
+        /// <summary>开机自启时提示一次，避免"看不见窗口以为没启动"。</summary>
+        public void NotifyStarted()
+        {
+            try
+            {
+                _tray?.ShowBalloonTip(3000, "雷神控制中心",
+                    "已在后台运行（双击托盘图标打开）。", WinForms.ToolTipIcon.Info);
+            }
+            catch { }
         }
 
         private void Theme_Changed(object sender, RoutedEventArgs e)

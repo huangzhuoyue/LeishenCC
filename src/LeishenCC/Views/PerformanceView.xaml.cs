@@ -21,7 +21,6 @@ namespace LeishenCC.Views
 
             PlanSwitch.IsChecked = true;
             PlanHint.Text = "游戏/高性能指向高性能计划，办公指向平衡计划；若检测到原厂电源方案则优先使用。";
-            StartupSwitch.IsChecked = IsStartupEnabled();
 
             // Fn 性能模式键按下时同步选中状态；Loaded/Unloaded 成对订阅，
             // 保证切回本页时既能收到后续事件，也能立即按当前设置重画卡片。
@@ -94,26 +93,6 @@ namespace LeishenCC.Views
                 new[] { "高性能", "游戏", "办公 / 静音" }[mode],
                 ok ? " 已下发" : " 下发失败",
                 planMsg.TrimStart('，'));
-        }
-
-        private static bool IsStartupEnabled()
-        {
-            using (var k = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run"))
-            {
-                return k != null && k.GetValue("LeishenCC") != null;
-            }
-        }
-
-        private void Startup_Changed(object sender, RoutedEventArgs e)
-        {
-            if (_init) return;
-            bool on = StartupSwitch.IsChecked == true;
-            using (var k = Registry.CurrentUser.CreateSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run"))
-            {
-                if (k == null) return;
-                if (on) k.SetValue("LeishenCC", "\"" + System.Reflection.Assembly.GetExecutingAssembly().Location + "\"");
-                else k.DeleteValue("LeishenCC", false);
-            }
         }
     }
 }

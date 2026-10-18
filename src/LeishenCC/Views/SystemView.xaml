@@ -8,6 +8,22 @@
                    Style="{StaticResource Body}" Margin="0,4,0,18" />
 
         <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <Grid>
+                    <StackPanel>
+                        <TextBlock Text="开机自启（替代原版控制中心）" Style="{StaticResource H2}" FontSize="14" />
+                        <TextBlock Text="用计划任务在登录时静默启动（最高权限，不弹 UAC），并停用原厂 ControlCenter 的自启任务。关闭即恢复原版自启。"
+                                   Style="{StaticResource Caption}" Margin="0,4,0,0" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ToggleButton x:Name="StartupSwitch" Style="{StaticResource Switch}"
+                                  HorizontalAlignment="Right" VerticalAlignment="Center"
+                                  Checked="Startup_Toggled" Unchecked="Startup_Toggled" />
+                </Grid>
+                <TextBlock x:Name="StartupText" Style="{StaticResource Caption}" Margin="0,10,0,0" TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+
+        <Border Style="{StaticResource Card}" Margin="0,12,0,0">
             <Grid>
                 <StackPanel>
                         <TextBlock Text="屏蔽 Windows 键" Style="{StaticResource H2}" FontSize="14" />

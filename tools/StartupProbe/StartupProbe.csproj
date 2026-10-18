@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net5.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>StartupProbe</AssemblyName>
+    <RootNamespace>StartupProbe</RootNamespace>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- 直接复用主程序里的同一份实现，避免两套逻辑 -->
+    <Compile Include="..\..\src\LeishenCC\Core\StartupTask.cs" Link="StartupTask.cs" />
+  </ItemGroup>
+</Project>

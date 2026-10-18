@@ -50,15 +50,6 @@
                     </StackPanel>
                     <ToggleButton x:Name="PlanSwitch" Style="{StaticResource Switch}" HorizontalAlignment="Right" VerticalAlignment="Center" />
                 </Grid>
-                <Border Height="1" Background="{DynamicResource Divider}" Margin="0,12,0,12" />
-                <Grid>
-                    <StackPanel>
-                        <TextBlock Text="开机自启" Style="{StaticResource H2}" FontSize="14" />
-                        <TextBlock Text="在当前用户登录时自动运行（管理员权限会触发一次 UAC 提示）。" Style="{StaticResource Caption}" Margin="0,4,0,0" />
-                    </StackPanel>
-                    <ToggleButton x:Name="StartupSwitch" Style="{StaticResource Switch}" HorizontalAlignment="Right" VerticalAlignment="Center"
-                                  Checked="Startup_Changed" Unchecked="Startup_Changed" />
-                </Grid>
             </StackPanel>
         </Border>
 

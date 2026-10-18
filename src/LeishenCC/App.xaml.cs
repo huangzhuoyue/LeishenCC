@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Windows;
 using LeishenCC.Core;
 
@@ -9,6 +10,11 @@ namespace LeishenCC
         /// <summary>截图/抓包等无界面模式：不接管风扇，避免影响硬件状态。</summary>
         public static bool Headless;
 
+        /// <summary>第二个实例用来通知已有实例把窗口叫到前台。</summary>
+        public static EventWaitHandle ShowEvent;
+
+        private static Mutex _instanceMutex;
+
         public static void ApplyTheme(bool dark)
         {
             var dict = new ResourceDictionary
@@ -18,6 +24,26 @@ namespace LeishenCC
             var merged = Current.Resources.MergedDictionaries;
             if (merged.Count > 0) merged[0] = dict;
             else merged.Add(dict);
+        }
+
+        /// <summary>单实例：开机自启 + 手动双击同时发生时，只保留一个进程、一个托盘图标。</summary>
+        private bool ClaimSingleInstance()
+        {
+            bool created;
+            _instanceMutex = new Mutex(true, @"Local\LeishenCC.App", out created);
+            if (created)
+            {
+                ShowEvent = new EventWaitHandle(false, EventResetMode.AutoReset, @"Local\LeishenCC.Show");
+                return true;
+            }
+
+            // 已有实例：让它把窗口显示出来，本进程静默退出
+            try
+            {
+                using (var ev = EventWaitHandle.OpenExisting(@"Local\LeishenCC.Show")) ev.Set();
+            }
+            catch { }
+            return false;
         }
 
         private void OnStartup(object sender, StartupEventArgs e)
@@ -42,6 +68,15 @@ namespace LeishenCC
             if (lightShot) ApplyTheme(false);
             Headless = shot || (e.Args.Length > 0 && e.Args[0] == "--fnprobe");
 
+            // --startup：由计划任务在登录时拉起，直接驻留托盘，不弹窗、不抢焦点
+            bool startup = Array.IndexOf(e.Args, "--startup") >= 0;
+
+            if (!Headless && !ClaimSingleInstance())
+            {
+                Shutdown();
+                return;
+            }
+
             Hub.WmiOk = Hub.Wmi.Connect();
             if (Hub.WmiOk)
             {
@@ -54,10 +89,23 @@ namespace LeishenCC
             // Fn 组合键（性能模式键 / 控制中心键 / 摄像头键 / 背光）监听
             if (Settings.FnKeyEnabled) FnKeyService.Start();
 
+            // 已接管开机自启时，若程序被移动到别处，用当前路径重建任务
+            if (!Headless) StartupTask.RepairIfNeeded();
+
             var win = new MainWindow();
             MainWindow = win;
             if (Array.IndexOf(e.Args, "collapse") >= 0) win.SetNavCollapsed(true, false);
-            win.Show();
+
+            if (startup && !Headless)
+            {
+                // 不调用 Show()：WPF 不会创建窗口句柄，等效于"启动即最小化到托盘"，
+                // 不会闪一下窗口，也不抢焦点。托盘图标已由 MainWindow 构造函数建立。
+                win.NotifyStarted();
+            }
+            else
+            {
+                win.Show();
+            }
 
             // --fnprobe <秒数>：不弹窗，纯抓 Fn 键原始事件，写 fnprobe.log
             if (e.Args.Length > 0 && e.Args[0] == "--fnprobe")

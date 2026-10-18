@@ -26,8 +26,11 @@ namespace LeishenCC.Views
                 Hub.SupportDds ? "支持" : "不支持",
                 Hub.CameraStatus);
             RefreshCamera();
+            RefreshStartup();
 
             _init = false;
+            StartupSwitch.Checked += Startup_Toggled;
+            StartupSwitch.Unchecked += Startup_Toggled;
             WinKeySwitch.Checked += WinKey_Toggled;
             WinKeySwitch.Unchecked += WinKey_Toggled;
             TraySwitch.Checked += Tray_Toggled;
@@ -41,6 +44,54 @@ namespace LeishenCC.Views
         private void OnFnEvent(FnKeyEvent ev)
         {
             Dispatcher.BeginInvoke(new Action(RefreshFn));
+        }
+
+        // ---------- 开机自启：计划任务接管，替代原厂 \ControlCenter\ControlCenter ----------
+
+        private bool _syncingStartup;
+
+        private void Startup_Toggled(object sender, RoutedEventArgs e)
+        {
+            if (_init || _syncingStartup) return;
+
+            bool on = StartupSwitch.IsChecked == true;
+            bool ok = on ? StartupTask.Enable() : StartupTask.Disable();
+
+            Result.Foreground = (System.Windows.Media.Brush)FindResource(ok ? "TextMuted" : "Danger");
+            if (ok)
+            {
+                Result.Text = on
+                    ? "已接管开机自启：下次登录由重置版启动（托盘常驻），原版 ControlCenter 自启已停用。"
+                    : "已恢复原版自启，重置版不再随登录启动。";
+            }
+            else
+            {
+                Result.Text = "操作失败：" + StartupTask.LastError;
+            }
+            Hub.Write("Startup " + (on ? "takeover" : "restore") + " -> " + ok +
+                      (ok ? "" : " | " + StartupTask.LastError));
+
+            RefreshStartup();
+        }
+
+        private void RefreshStartup()
+        {
+            _syncingStartup = true;
+            bool active;
+            try { active = StartupTask.Active; } catch { active = false; }
+            StartupSwitch.IsChecked = active;
+            _syncingStartup = false;
+
+            var text = StartupTask.Describe();
+
+            // 程序被移动/重新构建到别的目录时，任务里记录的路径会失效
+            string reg = StartupTask.Active ? StartupTask.RegisteredExe : null;
+            if (!string.IsNullOrEmpty(reg) &&
+                !string.Equals(reg, StartupTask.ExePath, StringComparison.OrdinalIgnoreCase))
+            {
+                text += "\n注意：任务指向 " + reg + "，与当前程序位置不同 —— 关掉再打开本开关即可修正。";
+            }
+            StartupText.Text = text;
         }
 
         private void RefreshFn()
