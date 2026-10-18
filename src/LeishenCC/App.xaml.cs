@@ -59,6 +59,28 @@ namespace LeishenCC
                 ev.Handled = true;
             };
 
+            // --startup-enable / --startup-disable：不建窗口，直接接管或恢复开机自启，写 startup.log 后退出
+            if (e.Args.Length > 0 && (e.Args[0] == "--startup-enable" || e.Args[0] == "--startup-disable"))
+            {
+                bool on = e.Args[0] == "--startup-enable";
+                bool ok = on ? StartupTask.Enable() : StartupTask.Disable();
+                try
+                {
+                    System.IO.File.WriteAllText(
+                        System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "startup.log"),
+                        DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "  " + e.Args[0] + "\n" +
+                        "result = " + ok + "\n" +
+                        (ok ? "" : "error  = " + StartupTask.LastError + "\n") +
+                        "exe    = " + StartupTask.ExePath + "\n" +
+                        "state  = " + StartupTask.Describe() + "\n",
+                        new System.Text.UTF8Encoding(false));
+                }
+                catch { }
+                Hub.AppExiting = true;
+                Shutdown();
+                return;
+            }
+
             ApplyTheme(Settings.DarkTheme);
 
             bool shot = e.Args.Length > 0 && e.Args[0] == "--shot";

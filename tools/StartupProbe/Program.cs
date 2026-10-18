@@ -18,12 +18,18 @@ namespace StartupProbe
             W("ExePath            = " + StartupTask.ExePath);
             W("LeishenCC 任务启用 = " + StartupTask.Active);
             W("原厂任务启用       = " + StartupTask.OriginalEnabled + "  (可读=" + StartupTask.OriginalKnown + ")");
-            W("任务登记的可执行文件 = " + (StartupTask.RegisteredExe ?? "(无任务)"));
+            W("任务登记的可执行文件 = " + (StartupTask.RegisteredExe ?? "(读不到)"));
             W("状态描述           = " + StartupTask.Describe());
 
             W("");
             W("--- 原厂任务读取诊断 ---");
             W(StartupTask.DebugDump());
+
+            if (!string.IsNullOrEmpty(StartupTask.RegisteredExeError))
+            {
+                W("");
+                W("RegisteredExe 读取错误 = " + StartupTask.RegisteredExeError);
+            }
 
             W("");
             W("--- COM 注册通道自检 ---");

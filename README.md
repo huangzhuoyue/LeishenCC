@@ -247,6 +247,7 @@ tools/StartupProbe/   自启诊断（复用 StartupTask，只读检查或 --enab
 | 参数 | 行为 |
 |---|---|
 | `--startup` | 不显示主窗口，直接驻留托盘（计划任务使用），并弹一次托盘提示 |
+| `--startup-enable` / `--startup-disable` | 不建窗口，直接接管 / 恢复开机自启，结果写 `startup.log` 后退出（便于脚本化） |
 | （无参数） | 正常显示窗口 |
 
 配套细节：

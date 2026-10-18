@@ -21,7 +21,8 @@ namespace LeishenCC.Core
     {
         public const string TaskName = "LeishenCC";
         public const string OriginalTaskName = "ControlCenter";
-        public const string OriginalTaskPath = @"\ControlCenter\";
+        // 注意：ITaskFolder::GetFolder 不接受末尾反斜杠，写成 "\ControlCenter\" 会报 0x8007007B（路径无效）
+        public const string OriginalTaskPath = @"\ControlCenter";
         private const string RunKey = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run";
 
         public static string LastError = "";
@@ -184,25 +185,37 @@ namespace LeishenCC.Core
             return "两边都未设置开机自启。";
         }
 
+        /// <summary>RegisteredExe 读取失败时的细节，便于排查。</summary>
+        public static string RegisteredExeError = "";
+
         /// <summary>任务里记录的可执行文件路径，用于发现"程序已被移动到别处"。</summary>
         public static string RegisteredExe
         {
             get
             {
+                RegisteredExeError = "";
                 try
                 {
                     object svc = Service();
-                    object folder = GetFolder(svc, @"\");
+                    object folder = OpenFolder(svc, @"\");
                     object task = Call(folder, "GetTask", TaskName);
-                    if (task == null) return null;
-                    object def = Call(task, "get_Definition");
-                    object actions = Call(def, "get_Actions");
-                    int n = Convert.ToInt32(Call(actions, "get_Count"));
-                    if (n <= 0) return null;
-                    object act = Call(actions, "get_Item", 1);
-                    return Convert.ToString(Call(act, "get_Path"));
+                    if (task == null) { RegisteredExeError = "GetTask 返回空"; return null; }
+
+                    object def = GetProp(task, "Definition");
+                    object actions = GetProp(def, "Actions");
+                    int n = Convert.ToInt32(GetProp(actions, "Count"));
+                    if (n <= 0) { RegisteredExeError = "任务没有动作"; return null; }
+
+                    object act = GetProp(actions, "Item", 1);
+                    var path = Convert.ToString(GetProp(act, "Path"));
+                    if (string.IsNullOrEmpty(path)) RegisteredExeError = "动作 Path 为空";
+                    return path;
                 }
-                catch { return null; }
+                catch (Exception ex)
+                {
+                    RegisteredExeError = Detail(ex);
+                    return null;
+                }
             }
         }
 
@@ -245,13 +258,13 @@ namespace LeishenCC.Core
                 object t = Call(folder, "GetTask", probe);
                 sb.AppendLine("5) 回读 Enabled=" + GetProp(t, "Enabled"));
 
-                object def = Call(t, "get_Definition");
-                object actions = Call(def, "get_Actions");
-                int n = Convert.ToInt32(Call(actions, "get_Count"));
+                object def = GetProp(t, "Definition");
+                object actions = GetProp(def, "Actions");
+                int n = Convert.ToInt32(GetProp(actions, "Count"));
                 for (int i = 1; i <= n; i++)
                 {
-                    object act = Call(actions, "get_Item", i);
-                    sb.AppendLine("   动作" + i + ": " + Call(act, "get_Path") + " " + Call(act, "get_Arguments"));
+                    object act = GetProp(actions, "Item", i);
+                    sb.AppendLine("   动作" + i + ": " + GetProp(act, "Path") + " " + GetProp(act, "Arguments"));
                 }
 
                 Call(folder, "DeleteTask", probe, 0);
@@ -437,10 +450,11 @@ namespace LeishenCC.Core
             return target.GetType().InvokeMember(member, BindingFlags.InvokeMethod, null, target, a);
         }
 
-        private static object GetProp(object target, string name)
+        private static object GetProp(object target, string name, params object[] index)
         {
             if (target == null) return null;
-            return target.GetType().InvokeMember(name, BindingFlags.GetProperty, null, target, null);
+            var a = (index == null || index.Length == 0) ? null : index;
+            return target.GetType().InvokeMember(name, BindingFlags.GetProperty, null, target, a);
         }
 
         private static void SetProp(object target, string name, object value)
