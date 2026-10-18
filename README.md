@@ -142,6 +142,53 @@ dotnet build -c Release
 
 ---
 
+## MCP 服务（可选，仅本地）
+
+`tools/FanMcp` 提供一个 stdio 传输的 MCP 服务，让本地 agent 直接读写自定义风扇曲线。
+
+- **仅本地可达**：使用 stdio，不监听任何端口，只能由 MCP 客户端以子进程方式拉起，不存在对外暴露面。
+- **复用同一份源码**：直接链接 `src/LeishenCC/Core` 下的 `GmWmi` / `FanProfile` / `Settings` / `SystemStats`，与界面行为一致（每 2 秒按「曲线 + 当前温度」下发）。
+- **安全兜底**：进程退出（含 stdin EOF）时，只有本进程接管过风扇才会自动下发 `0xFB00/0x0206` 交回 BIOS；从未接管则不触碰当前状态。
+
+### 工具
+
+| 工具 | 作用 |
+| --- | --- |
+| `fan_status` | 控制开关、三路温度/转速、曲线目标占空比、最近下发结果（只读） |
+| `fan_list_profiles` | 三档曲线与当前档位（只读） |
+| `fan_set_curve` | 写入某档曲线（仅注册表，8 点对应 30–100℃） |
+| `fan_apply_slot` | 启用某档并接管，按曲线持续下发 |
+| `fan_set_speed` | 立即下发固定占空比（不随温度变化） |
+| `fan_stop` | 关闭自定义控制，交回 BIOS |
+| `fan_reset_curve` | 恢复该机型默认曲线（按风扇表编号） |
+| `ec_read` | 只读诊断查询（`0xFA00`，返回 a0/a2..a6） |
+
+### 构建与接入
+
+```bash
+cd tools/FanMcp
+dotnet build -c Release
+```
+
+MCP 客户端配置（`mcpServers` 格式）：
+
+```json
+{
+  "mcpServers": {
+    "leishen-fan": {
+      "command": "C:/Users/<you>/Documents/LeishenReverse/tools/FanMcp/bin/Release/net5.0-windows/LeishenFanMcp.exe",
+      "args": []
+    }
+  }
+}
+```
+
+自检：`python tools/FanMcp/probe.py` —— 走一遍握手、列工具、读曲线，并把曲线**原样写回**，不改变实际风扇行为。
+
+> 与桌面端同时开启自定义风扇时，两边会各按自己的档位下发。建议二选一，或确保使用同一档位。
+
+---
+
 ## 目录结构
 
 ```
@@ -153,6 +200,7 @@ src/LeishenCC/
   Theme/       Dark / Light 配色与公共样式
   MainWindow.xaml(.cs)
 tools/Decomp/  自建的反编译 CLI（ICSharpCode.Decompiler），用于还原原厂结构
+tools/FanMcp/  本地 MCP 服务（stdio），把风扇曲线控制暴露给 agent
 ```
 
 ## 状态刷新机制

@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net5.0-windows</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>LeishenFanMcp</AssemblyName>
+    <RootNamespace>LeishenFanMcp</RootNamespace>
+    <Version>1.0.0</Version>
+    <Product>Leishen Fan MCP Server</Product>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Management" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
+  </ItemGroup>
+
+  <!-- 与桌面端共用同一份协议与曲线实现，避免两处分叉 -->
+  <ItemGroup>
+    <Compile Include="..\..\src\LeishenCC\Core\GmWmi.cs" Link="Core\GmWmi.cs" />
+    <Compile Include="..\..\src\LeishenCC\Core\FanProfile.cs" Link="Core\FanProfile.cs" />
+    <Compile Include="..\..\src\LeishenCC\Core\Settings.cs" Link="Core\Settings.cs" />
+    <Compile Include="..\..\src\LeishenCC\Core\SystemStats.cs" Link="Core\SystemStats.cs" />
+  </ItemGroup>
+
+</Project>
