@@ -6,6 +6,9 @@ namespace LeishenCC
 {
     public partial class App : Application
     {
+        /// <summary>截图/抓包等无界面模式：不接管风扇，避免影响硬件状态。</summary>
+        public static bool Headless;
+
         public static void ApplyTheme(bool dark)
         {
             var dict = new ResourceDictionary
@@ -37,6 +40,7 @@ namespace LeishenCC
             if (shot && e.Args.Length > 1) shotDir = e.Args[1];
             bool lightShot = shot && e.Args.Length > 2 && e.Args[2] == "light";
             if (lightShot) ApplyTheme(false);
+            Headless = shot || (e.Args.Length > 0 && e.Args[0] == "--fnprobe");
 
             Hub.WmiOk = Hub.Wmi.Connect();
             if (Hub.WmiOk)

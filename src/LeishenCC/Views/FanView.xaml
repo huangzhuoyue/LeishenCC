@@ -13,6 +13,7 @@
                 <StackPanel>
                     <TextBlock Text="自定义风扇曲线" Style="{StaticResource H2}" FontSize="14" />
                     <TextBlock x:Name="FanHint" Style="{StaticResource Caption}" Margin="0,4,0,0" />
+                    <TextBlock x:Name="ControlStateText" Style="{StaticResource Caption}" Margin="0,4,0,0" />
                 </StackPanel>
                 <ToggleButton x:Name="FanSwitch" Style="{StaticResource Switch}"
                               HorizontalAlignment="Right" VerticalAlignment="Center" />

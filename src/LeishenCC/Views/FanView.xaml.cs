@@ -13,7 +13,6 @@ namespace LeishenCC.Views
         private int _slot;
         private int _sel;
         private bool _init = true;
-        private int _tick;
 
         public FanView()
         {
@@ -120,6 +119,8 @@ namespace LeishenCC.Views
             Settings.SetUserFanSys(_slot, _sys[_slot].ToString());
             Hub.Write(string.Format("保存档位 {0}: CPU={1} GPU={2} SYS={3}",
                 _slot + 1, _cpu[_slot], _gpu[_slot], _sys[_slot]));
+
+            FanControlService.DeliverNow();   // 改完立即按新曲线下发一次
         }
 
         private void BtnApply_Click(object sender, RoutedEventArgs e)
@@ -178,13 +179,19 @@ namespace LeishenCC.Views
             }
 
             Persist();
-            bool ok = Hub.WmiOk && Hub.Wmi.SetFanControl(on);
-            Settings.FanControlEnabled = on;
-            Hub.Write("SetFanControl(" + on + ") -> " + ok);
+            bool ok = FanControlService.Enable(on);
+
+            if (!ok && on && FanControlService.OwnedByOther)
+            {
+                Result.Foreground = (System.Windows.Media.Brush)FindResource("Danger");
+                Result.Text = "已有外部进程接管风扇（LeishenFanMcp --hold），本程序让位。";
+                _init = true; FanSwitch.IsChecked = false; _init = false;
+                return;
+            }
 
             Result.Foreground = (System.Windows.Media.Brush)FindResource(ok ? "TextMuted" : "Danger");
             Result.Text = ok
-                ? (on ? "自定义风扇已开启，正在按曲线下发。" : "自定义风扇已关闭，交回 BIOS 控制。")
+                ? (on ? "自定义风扇已开启，常驻按曲线下发（与是否停留本页无关）。" : "自定义风扇已关闭，交回 BIOS 控制。")
                 : "EC 写入失败，请确认以管理员身份运行。";
         }
 
@@ -201,13 +208,16 @@ namespace LeishenCC.Views
                 temp, fan, Current.PercentFor(temp));
             Editor.SetLive(temp, Current.PercentFor(temp));
 
-            if (!Settings.FanControlEnabled || !Hub.WmiOk) return;
-            if (++_tick % 2 != 0) return;   // 2 秒一次
+            // 下发由 FanControlService 常驻执行，这里只显示状态
+            ControlStateText.Text = "控制状态：" + FanControlService.StatusText;
 
-            int cpu = _cpu[_slot].PercentFor(Hub.CpuTemp);
-            int gpu = _gpu[_slot].PercentFor(Hub.GpuTemp);
-            int sys = Hub.Support3Fan ? _sys[_slot].PercentFor(Hub.SysTemp) : 255;
-            Hub.Wmi.SetFanSpeed(cpu, gpu, sys);
+            bool on = FanControlService.Running;
+            if (FanSwitch.IsChecked != on && !FanControlService.OwnedByOther)
+            {
+                _init = true;
+                FanSwitch.IsChecked = on;
+                _init = false;
+            }
         }
     }
 }

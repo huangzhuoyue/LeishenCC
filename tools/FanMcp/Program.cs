@@ -27,19 +27,28 @@ namespace LeishenFanMcp
         private static volatile bool _running;      // 本进程是否已接管风扇
         private static int _slot;
         private static int _tick;
+        private static Mutex _ownerMutex;
         private static string _lastDelivery = "尚未下发";
 
         private static int Main(string[] args)
         {
+            AppDomain.CurrentDomain.ProcessExit += (s, e) => RestoreBios();
+            Console.CancelKeyPress += (s, e) => RestoreBios();
+
+            // --hold <分钟> [档位]：常驻接管模式（不经 MCP 协议），用于长时间实测
+            if (args.Length > 0 && args[0] == "--hold")
+            {
+                _wmiOk = Wmi.Connect();
+                _threeFan = ReadThreeFan();
+                return RunHold(args);
+            }
+
             var stdout = new StreamWriter(Console.OpenStandardOutput(), new UTF8Encoding(false)) { AutoFlush = true };
             Console.SetOut(TextWriter.Null);        // 任何意外输出都不能污染协议流
             _out = stdout;
 
             _wmiOk = Wmi.Connect();
             _threeFan = ReadThreeFan();
-
-            AppDomain.CurrentDomain.ProcessExit += (s, e) => RestoreBios();
-            Console.CancelKeyPress += (s, e) => RestoreBios();
 
             var stdin = new StreamReader(Console.OpenStandardInput(), new UTF8Encoding(false));
             string line;
@@ -51,6 +60,79 @@ namespace LeishenFanMcp
             }
 
             RestoreBios();
+            return 0;
+        }
+
+        /// <summary>
+        /// 常驻接管：读注册表里指定档位的曲线，每 2 秒按当前温度下发，直到时间到或被终止。
+        /// 时间到/收到退出信号时交回 BIOS。
+        /// </summary>
+        private static int RunHold(string[] args)
+        {
+            // 与桌面端 LeishenCC 的 FanControlService 互斥，避免两处同时写 EC
+            try
+            {
+                using (var existing = Mutex.OpenExisting(@"Local\LeishenFanOwner"))
+                {
+                    Console.WriteLine("已有进程在接管风扇（控制中心已开启自定义风扇），本进程退出");
+                    return 4;
+                }
+            }
+            catch (WaitHandleCannotBeOpenedException) { }
+            catch (Exception) { }
+            try { _ownerMutex = new Mutex(true, @"Local\LeishenFanOwner"); }
+            catch (Exception ex) { Console.WriteLine("创建互斥量失败: " + ex.Message); }
+            int minutes = 60;
+            if (args.Length > 1) int.TryParse(args[1], out minutes);
+            // 档位：显式给了就用给的，否则跟随桌面端当前选择的档位
+            int slot;
+            if (args.Length > 2 && int.TryParse(args[2], out slot) && slot >= 1 && slot <= 3)
+                _slot = slot - 1;
+            else
+                _slot = Settings.FanProfileIndex;
+
+            if (!_wmiOk)
+            {
+                Console.WriteLine("EC 接口不可用：" + (Wmi.LastError ?? "未知"));
+                return 2;
+            }
+
+            bool ok = Wmi.SetFanControl(true);
+            if (!ok)
+            {
+                Console.WriteLine("SetFanControl(true) 失败");
+                return 3;
+            }
+            Settings.FanControlEnabled = true;
+            Settings.FanProfileIndex = _slot;
+            _running = true;
+
+            var c = Curves(_slot);
+            Console.WriteLine("已接管: 档位 {0}, 时长 {1} 分钟, 三风扇={2}", _slot + 1, minutes, _threeFan);
+            Console.WriteLine("曲线 CPU={0} GPU={1} SYS={2}", Join(c.Item1.Percent), Join(c.Item2.Percent), Join(c.Item3.Percent));
+
+            var end = DateTime.Now.AddMinutes(minutes);
+            int tick = 0;
+            while (DateTime.Now < end)
+            {
+                DeliverOnce();
+                if (++tick % 10 == 0)   // 每 20 秒打印一次
+                {
+                    int ct, gt, cf, gf, st, sf;
+                    if (Wmi.ReadThermal(out ct, out gt, out cf, out gf, out st, out sf))
+                    {
+                        var cur = Curves(_slot);
+                        Console.WriteLine("{0:HH:mm:ss} CPU {1}℃ {2}RPM → {3}% | GPU {4}℃ {5}RPM → {6}% | SYS {7}℃ {8}RPM → {9}%",
+                            DateTime.Now, ct, cf, cur.Item1.PercentFor(ct),
+                            gt, gf, cur.Item2.PercentFor(gt),
+                            st, sf, _threeFan ? cur.Item3.PercentFor(st).ToString() : "不控制");
+                    }
+                }
+                Thread.Sleep(2000);
+            }
+
+            RestoreBios();
+            Console.WriteLine("到时，已交回 BIOS");
             return 0;
         }
 
@@ -458,12 +540,31 @@ namespace LeishenFanMcp
             int ct, gt, cf, gf, st, sf;
             if (!Wmi.ReadThermal(out ct, out gt, out cf, out gf, out st, out sf)) return;
             var c = Curves(_slot);
-            int cpu = c.Item1.PercentFor(ct);
-            int gpu = c.Item2.PercentFor(gt);
-            int sys = _threeFan ? c.Item3.PercentFor(st) : 255;
+            int cpu = PercentHysteresis(c.Item1, ct, ref _lastIdxCpu);
+            int gpu = PercentHysteresis(c.Item2, gt, ref _lastIdxGpu);
+            int sys = _threeFan ? PercentHysteresis(c.Item3, st, ref _lastIdxSys) : 255;
             bool ok = Wmi.SetFanSpeed(cpu, gpu, sys);
             _lastDelivery = string.Format("{0:HH:mm:ss} CPU {1}% GPU {2}% SYS {3} -> {4}",
                 DateTime.Now, cpu, gpu, _threeFan ? sys.ToString() : "不控制", ok ? "成功" : "失败");
+        }
+
+        private static int _lastIdxCpu = -1, _lastIdxGpu = -1, _lastIdxSys = -1;
+
+        /// <summary>
+        /// 带滞回的档位取值。原厂 PercentFor 是 10℃ 一档的阶梯：79℃→55%、80℃→75%，
+        /// 温度在断点附近抖动时转速会来回跳（实测 2626↔3297 RPM）。
+        /// 这里保留「升温立即升档」，但降档要求低于当前档下界 2℃，把抖动压掉。
+        /// </summary>
+        private static int PercentHysteresis(FanCurve curve, int tempC, ref int lastIdx, int hyst = 2)
+        {
+            int idx = curve.IndexFor(tempC);
+            if (lastIdx >= 0 && idx < lastIdx)
+            {
+                int boundary = FanCurve.Temps[lastIdx];
+                if (tempC > boundary - hyst) idx = lastIdx;   // 还没凉透，先不降
+            }
+            lastIdx = idx;
+            return curve.Percent[idx];
         }
 
         /// <summary>进程退出时把风扇交回 BIOS；本进程从未接管则不碰用户当前状态。</summary>

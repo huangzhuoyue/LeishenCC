@@ -64,6 +64,9 @@ namespace LeishenCC
             FnKeyService.ActivateRequested += OnFnActivate;
             FnKeyService.PowerModeChanged += OnFnPowerMode;
 
+            // 恢复上次的自定义风扇状态：常驻下发，不依赖页面可见性
+            if (!App.Headless) FanControlService.StartIfEnabled();
+
             Closing += OnClosing;
             Activated += (s, e) => Hub.Poll();      // 从托盘恢复时立刻补一次刷新
             StateChanged += (s, e) =>
@@ -164,6 +167,7 @@ namespace LeishenCC
             }
             _timer.Stop();
             _slow.Stop();
+            FanControlService.Shutdown();   // 退出前交回 BIOS，避免把风扇锁在最后的占空比
             if (_tray != null)
             {
                 _tray.Visible = false;
