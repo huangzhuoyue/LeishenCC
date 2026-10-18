@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net5.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>FanSweep</AssemblyName>
+    <RootNamespace>FanSweep</RootNamespace>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- 复用主程序的 EC 协议封装，避免两套实现 -->
+    <Compile Include="..\..\src\LeishenCC\Core\GmWmi.cs" Link="GmWmi.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="System.Management" Version="5.0.0" />
+  </ItemGroup>
+</Project>
