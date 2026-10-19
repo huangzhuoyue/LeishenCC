@@ -51,14 +51,18 @@ namespace LeishenCC
                 Hub.Poll();                 // 快刷新：温度/占用/转速（1s）
                 LblClock.Text = DateTime.Now.ToString("HH:mm:ss");
             };
-            _timer.Start();
+            // Fn 抓包模式：不启动周期轮询，避免 SMI 读写干扰热键事件捕获
+            if (!App.FnProbeMode)
+            {
+                _timer.Start();
 
-            // 慢刷新：参考原厂 timer2(5s) + refresh_info，重新读取可能被外部改动的状态
-            _slow.Interval = TimeSpan.FromSeconds(5);
-            _slow.Tick += (s, e) => Hub.RefreshStates();
-            _slow.Start();
+                // 慢刷新：参考原厂 timer2(5s) + refresh_info，重新读取可能被外部改动的状态
+                _slow.Interval = TimeSpan.FromSeconds(5);
+                _slow.Tick += (s, e) => Hub.RefreshStates();
+                _slow.Start();
 
-            Hub.Poll();
+                Hub.Poll();
+            }
             SetupTray();
             ListenShowRequests();
 
@@ -163,13 +167,15 @@ namespace LeishenCC
             }));
         }
 
-        private static readonly string[] ModeNames = { "高性能", "游戏", "办公 / 静音" };
+        private static readonly string[] ModeNames = PowerModeService.Names;
 
         private void OnFnPowerMode(int mode)
         {
             if (mode < 0 || mode > 2) return;
             try
             {
+                if (_tray != null)
+                    _tray.Text = "雷神控制中心（重建版）· " + ModeNames[mode];
                 _tray?.ShowBalloonTip(2500, "性能模式", "已切换到 " + ModeNames[mode], WinForms.ToolTipIcon.Info);
             }
             catch { }

@@ -250,5 +250,44 @@ namespace LeishenCC.Core
                 id == 3 ? 1u : 0u,
                 id == 4 ? 1u : 0u);
         }
+
+        /// <summary>
+        /// 0xFB00/0x0400：一次清掉多个事件位（a2=性能键、a3=控制中心键、a4=摄像头键）。
+        /// 原厂是处理完哪个清哪个；这里允许一次清多个，避免"组合事件"漏清导致 EC 挂起。
+        /// </summary>
+        public bool ClearEventBits(bool performance, bool controlCenter, bool camera)
+        {
+            if (!performance && !controlCenter && !camera) return true;
+            return Write(SET_EVENT_CLEAR,
+                performance ? 1u : 0u,
+                controlCenter ? 1u : 0u,
+                camera ? 1u : 0u);
+        }
+
+        /// <summary>
+        /// 顺序清 2/3/4 三个事件位，每条一个 SMI —— 原厂 SetEventStatus 每次只写一个字段，
+        /// "一条 SMI 同时置三个字段" 从未被原厂使用，语义未验证，所以这里保持单字段写法。
+        /// 启动 / 系统唤醒 / 未识别事件时用它兜底清残位。
+        /// </summary>
+        public bool ClearAllEvents()
+        {
+            bool a = ClearEvent(2);
+            bool b = ClearEvent(3);
+            bool c = ClearEvent(4);
+            return a && b && c;
+        }
+
+        /// <summary>丢掉缓存的 WMI 实例，下次调用重新连接（睡眠/唤醒、WMI 提供者重载后使用）。</summary>
+        public void Disconnect()
+        {
+            lock (_lock)
+            {
+                if (_instance != null)
+                {
+                    try { _instance.Dispose(); } catch { }
+                }
+                _instance = null;
+            }
+        }
     }
 }

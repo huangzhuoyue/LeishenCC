@@ -46,12 +46,22 @@ namespace LeishenCC.Views
             }
             else
             {
-                FanHint.Text = "开启后本程序每 2 秒按 CPU/GPU/系统温度下发一次占空比；退出程序前建议关闭，交回 BIOS。";
+                FanHint.Text = "开启后本程序每 2 秒按 CPU/GPU/系统温度下发一次占空比；档位 1/2/3 对应高性能/游戏/办公，"
+                             + "切性能模式（含 Fn 键）会自动换档并立即下发。退出程序前建议关闭，交回 BIOS。";
             }
 
             Editor.Changed += OnCurveChanged;
-            Loaded += (s, e) => { Hub.Updated += OnUpdated; OnUpdated(); };
-            Unloaded += (s, e) => Hub.Updated -= OnUpdated;
+            Loaded += (s, e) =>
+            {
+                Hub.Updated += OnUpdated;
+                FnKeyService.PowerModeChanged += OnPowerModeChanged;
+                OnUpdated();
+            };
+            Unloaded += (s, e) =>
+            {
+                Hub.Updated -= OnUpdated;
+                FnKeyService.PowerModeChanged -= OnPowerModeChanged;
+            };
 
             _init = false;
             LoadSlot();
@@ -86,6 +96,33 @@ namespace LeishenCC.Views
             _slot = int.Parse((string)rb.Tag);
             Settings.FanProfileIndex = _slot;
             LoadSlot();
+            // 手动换档也要立刻生效，别等下一个 2 秒周期；滞回记忆要清掉，否则降档会卡住
+            FanControlService.ResetHysteresis();
+            FanControlService.DeliverNow();
+        }
+
+        /// <summary>
+        /// 性能模式变化（Fn 键或性能页）时，自定义风扇的档位必须跟着走：
+        /// 否则本服务每 2 秒的下发会把模式切换的效果整个盖掉。
+        /// 切走前先把当前编辑中的曲线落盘，避免未保存的改动丢失。
+        /// </summary>
+        private void OnPowerModeChanged(int mode)
+        {
+            if (mode < 0 || mode > 2 || mode == _slot) return;
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (mode == _slot) return;
+                SaveToRegistry();
+                _slot = mode;
+                _init = true;
+                if (_slot == 0) Slot1.IsChecked = true;
+                else if (_slot == 1) Slot2.IsChecked = true;
+                else Slot3.IsChecked = true;
+                _init = false;
+                LoadSlot();
+                Result.Foreground = (System.Windows.Media.Brush)FindResource("TextMuted");
+                Result.Text = "已按性能模式切到档位 " + (_slot + 1) + "（" + PowerModeService.Names[_slot] + "）。";
+            }));
         }
 
         private void FanSel_Checked(object sender, RoutedEventArgs e)
@@ -114,13 +151,18 @@ namespace LeishenCC.Views
 
         private void Persist()
         {
+            SaveToRegistry();
+            FanControlService.DeliverNow();   // 改完立即按新曲线下发一次
+        }
+
+        /// <summary>把当前档位的三条曲线写回注册表（不下发）。</summary>
+        private void SaveToRegistry()
+        {
             StoreCurrent();
             Settings.SetUserFan(_slot, _cpu[_slot].FormatPair(_gpu[_slot]));
             Settings.SetUserFanSys(_slot, _sys[_slot].ToString());
             Hub.Write(string.Format("保存档位 {0}: CPU={1} GPU={2} SYS={3}",
                 _slot + 1, _cpu[_slot], _gpu[_slot], _sys[_slot]));
-
-            FanControlService.DeliverNow();   // 改完立即按新曲线下发一次
         }
 
         private void BtnApply_Click(object sender, RoutedEventArgs e)
@@ -128,6 +170,19 @@ namespace LeishenCC.Views
             Persist();
             Result.Foreground = (System.Windows.Media.Brush)FindResource("Success");
             Result.Text = "已保存到注册表，并在风扇控制开启时于下个周期生效。";
+        }
+
+        /// <summary>
+        /// 界面上的强冷开关。Fn+1 事件在某些 EC 状态下会停止上报（实测），
+        /// 必须留一个不依赖按键的入口，否则风扇会卡在 100% 无法收回。
+        /// </summary>
+        private void BtnBoost_Click(object sender, RoutedEventArgs e)
+        {
+            string msg = FanControlService.ToggleBoost();
+            Hub.Write("强冷按钮: " + msg);
+            Result.Foreground = (System.Windows.Media.Brush)FindResource("TextMuted");
+            Result.Text = msg;
+            OnUpdated();
         }
 
         private void BtnDefault_Click(object sender, RoutedEventArgs e)
@@ -204,12 +259,15 @@ namespace LeishenCC.Views
             }
             int temp = _sel == 0 ? Hub.CpuTemp : _sel == 1 ? Hub.GpuTemp : Hub.SysTemp;
             int fan = _sel == 0 ? Hub.CpuFan : _sel == 1 ? Hub.GpuFan : Hub.SysFan;
-            LiveText.Text = string.Format("实时：{0}°C · {1} RPM · 目标 {2}%",
-                temp, fan, Current.PercentFor(temp));
+            LiveText.Text = FanControlService.BoostActive
+                ? string.Format("强冷中 · {0}°C · {1} RPM · 三路 100%", temp, fan)
+                : string.Format("实时：{0}°C · {1} RPM · 目标 {2}%", temp, fan, Current.PercentFor(temp));
             Editor.SetLive(temp, Current.PercentFor(temp));
 
             // 下发由 FanControlService 常驻执行，这里只显示状态
             ControlStateText.Text = "控制状态：" + FanControlService.StatusText;
+            BtnBoost.Content = FanControlService.BoostActive ? "退出强冷" : "强冷（三路 100%）";
+            BtnBoost.IsEnabled = Hub.WmiOk;
 
             bool on = FanControlService.Running;
             if (FanSwitch.IsChecked != on && !FanControlService.OwnedByOther)

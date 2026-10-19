@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using LeishenCC.Core;
@@ -27,6 +28,7 @@ namespace LeishenCC.Views
                 Hub.CameraStatus);
             RefreshCamera();
             RefreshStartup();
+            DriverText.Text = DescribeDriver();
 
             _init = false;
             StartupSwitch.Checked += Startup_Toggled;
@@ -96,19 +98,79 @@ namespace LeishenCC.Views
 
         private void RefreshFn()
         {
-            bool on = FnKeyService.Running;
-            string head = on
-                ? "监听中 · GMC_WMIEvent"
-                : (Settings.FnKeyEnabled ? "未启动：" + (FnKeyService.LastError ?? "未知原因") : "已关闭");
-            if (FnKeyService.LastEvent == null)
+            FnText.Text = "监听状态：" + FnKeyService.StatusText +
+                          "\n最近按键：" + (FnKeyService.LastEvent == null
+                              ? "暂无"
+                              : FnKeyService.LastTime.ToString("HH:mm:ss") + "  " + FnKeyService.LastEvent.Describe());
+
+            var recent = FnKeyService.RecentEvents;
+            if (recent.Length == 0)
             {
-                FnText.Text = head + "\n最近按键：暂无";
+                FnHistoryText.Text = "事件历史：暂无";
+                return;
             }
-            else
+
+            var sb = new StringBuilder();
+            sb.AppendFormat("事件历史（新→旧，共 {0} 条，回声 {1} 条）：", FnKeyService.EventCount, FnKeyService.EchoCount);
+            for (int i = 0; i < recent.Length && i < 8; i++)
             {
-                var ev = FnKeyService.LastEvent;
-                FnText.Text = head + "\n最近按键：" + FnKeyService.LastTime.ToString("HH:mm:ss") + "  " + ev.Describe();
+                var r = recent[i];
+                sb.Append('\n').Append(r.Time.ToString("HH:mm:ss.fff"));
+                sb.Append(r.GapMs >= 0 ? "  +" + r.GapMs + "ms" : "  首条");
+                sb.Append("  ").Append(r.Source == "WMI2" ? "[WMI2]" : FnKeyEvent.KindNames[(int)r.Kind]);
+                if (r.Echo) sb.Append("  [回声]");
+                if (r.Simulated) sb.Append("  [模拟]");
+                if (!string.IsNullOrEmpty(r.Action)) sb.Append("  ").Append(r.Action);
+                if (!string.IsNullOrEmpty(r.Ack) && r.Ack != "无需确认") sb.Append("  ").Append(r.Ack);
             }
+            FnHistoryText.Text = sb.ToString();
+        }
+
+        /// <summary>
+        /// 原厂驱动服务状态。ControlCenter64.sys 在本机因签名校验失败未加载（系统日志 7000），
+        /// 但 Fn 键监听只走 root\wmi:GMC_WMIEvent（ACPI WMI mapper），不需要该驱动 —— 这里只是把
+        /// 事实显示出来，避免以后再怀疑"是不是驱动没起来导致 Fn 键失效"。
+        /// </summary>
+        private static string DescribeDriver()
+        {
+            try
+            {
+                using (var searcher = new System.Management.ManagementObjectSearcher(
+                    "SELECT Name,State,StartMode FROM Win32_Service WHERE Name='ControlCenter'"))
+                using (var col = searcher.Get())
+                {
+                    foreach (System.Management.ManagementObject o in col)
+                    {
+                        using (o)
+                        {
+                            return "原厂驱动 ControlCenter64.sys：服务状态 " + o["State"] + "，启动方式 " + o["StartMode"] +
+                                   "\n说明：本机该驱动签名校验失败、未能加载（系统日志 7000）；原厂控制中心在驱动未加载时 Fn 键仍然工作。"
+                                   + "\nFn 监听只依赖 root\\wmi:GMC_WMIEvent（ACPI WMI mapper / wmiacpi.sys），不依赖该驱动。";
+                        }
+                    }
+                }
+                return "原厂驱动 ControlCenter64.sys：服务不存在。Fn 监听不依赖它。";
+            }
+            catch (Exception ex)
+            {
+                return "原厂驱动 ControlCenter64.sys：查询失败（" + ex.Message + "）。Fn 监听不依赖它。";
+            }
+        }
+
+        private void FnResubscribe_Click(object sender, RoutedEventArgs e)
+        {
+            bool ok = FnKeyService.Restart("界面按钮");
+            Result.Foreground = (System.Windows.Media.Brush)FindResource(ok ? "TextMuted" : "Danger");
+            Result.Text = ok ? "Fn 组合键监听已重新订阅。" : "重新订阅失败：" + FnKeyService.LastError;
+            RefreshFn();
+        }
+
+        private void FnClear_Click(object sender, RoutedEventArgs e)
+        {
+            bool ok = FnKeyService.AckAllEvents("界面按钮");
+            Result.Foreground = (System.Windows.Media.Brush)FindResource(ok ? "TextMuted" : "Danger");
+            Result.Text = ok ? "已向 EC 顺序清 2/3/4 三个事件位。" : "清事件位失败：" + Hub.Wmi.LastError;
+            RefreshFn();
         }
 
         private void Fn_Toggled(object sender, RoutedEventArgs e)
@@ -134,6 +196,16 @@ namespace LeishenCC.Views
         private void FnPerf_Click(object sender, RoutedEventArgs e)
         {
             FnKeyService.Simulate(FnKeyKind.Performance, 1);
+            RefreshFn();
+        }
+
+        private bool _simFanMax;
+
+        /// <summary>模拟 WMI2 0x30（Fn+1 风扇状态），不按键也能验证强冷链路。</summary>
+        private void FnFan_Click(object sender, RoutedEventArgs e)
+        {
+            _simFanMax = !_simFanMax;
+            FnKeyService.SimulateWmi2Fan(_simFanMax);
             RefreshFn();
         }
 

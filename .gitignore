@@ -20,3 +20,16 @@ curve_backup_*.json
 *.suo
 *.user
 Thumbs.db
+
+# 本地逆向分析中间产物：报告 md 与脚本入库，二进制副本/工程缓存/临时解包不入库
+analysis/raw/
+analysis/ghidra_proj_*/
+analysis/ghidra_cache*/
+analysis/ghidra_home*/
+analysis/ghidra_appdata*/
+analysis/__pycache__/
+analysis/*.py
+analysis/osd/
+analysis/team-osd/
+HotKeyOSD_*/
+.workbuddy/

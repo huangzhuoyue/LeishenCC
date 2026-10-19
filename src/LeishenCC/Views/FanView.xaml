@@ -5,7 +5,7 @@
              FontFamily="{StaticResource UiFont}">
     <StackPanel>
         <TextBlock Text="风扇与散热" Style="{StaticResource H1}" />
-        <TextBlock Text="曲线写入 EC（0xFB00 / 0x0205），由本程序按温度轮询下发；关闭后交回 BIOS 自动策略。"
+        <TextBlock Text="按温度曲线下发占空比（0xFB00 / 0x0205）；三个档位与性能模式一一对应，切模式会自动跟随。关闭后交回 BIOS 自动策略。"
                    Style="{StaticResource Body}" Margin="0,4,0,18" />
 
         <Border Style="{StaticResource Card}">
@@ -27,9 +27,9 @@
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                         <Border Background="{DynamicResource ControlFill}" CornerRadius="5" Padding="1">
                             <StackPanel Orientation="Horizontal">
-                                <RadioButton x:Name="Slot1" Style="{StaticResource Segment}" Content="档位 1" GroupName="slot" Tag="0" Checked="Slot_Checked" />
-                                <RadioButton x:Name="Slot2" Style="{StaticResource Segment}" Content="档位 2" GroupName="slot" Tag="1" Checked="Slot_Checked" />
-                                <RadioButton x:Name="Slot3" Style="{StaticResource Segment}" Content="档位 3" GroupName="slot" Tag="2" Checked="Slot_Checked" />
+                                <RadioButton x:Name="Slot1" Style="{StaticResource Segment}" Content="1 高性能" GroupName="slot" Tag="0" Checked="Slot_Checked" />
+                                <RadioButton x:Name="Slot2" Style="{StaticResource Segment}" Content="2 游戏" GroupName="slot" Tag="1" Checked="Slot_Checked" />
+                                <RadioButton x:Name="Slot3" Style="{StaticResource Segment}" Content="3 办公" GroupName="slot" Tag="2" Checked="Slot_Checked" />
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -53,6 +53,7 @@
                 <Grid Margin="0,6,0,0">
                     <TextBlock x:Name="ValuesText" Style="{StaticResource Caption}" FontFamily="{StaticResource NumFont}" />
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button x:Name="BtnBoost" Content="强冷（三路 100%）" Style="{StaticResource SubtleButton}" Margin="0,0,8,0" Click="BtnBoost_Click" />
                         <Button x:Name="BtnDefault" Content="恢复默认" Style="{StaticResource SubtleButton}" Margin="0,0,8,0" Click="BtnDefault_Click" />
                         <Button x:Name="BtnApply" Content="保存并应用" Style="{StaticResource AccentButton}" Click="BtnApply_Click" />
                     </StackPanel>

@@ -49,6 +49,7 @@ namespace LeishenFanMcp
 
             _wmiOk = Wmi.Connect();
             _threeFan = ReadThreeFan();
+            _slot = Settings.FanProfileIndex;      // 状态里报告的档位必须与注册表/桌面端一致
 
             var stdin = new StreamReader(Console.OpenStandardInput(), new UTF8Encoding(false));
             string line;
@@ -539,6 +540,16 @@ namespace LeishenFanMcp
         {
             int ct, gt, cf, gf, st, sf;
             if (!Wmi.ReadThermal(out ct, out gt, out cf, out gf, out st, out sf)) return;
+
+            // 跟随注册表：桌面端切性能模式会把 FanControlSelect 换掉，这里必须跟着换曲线，
+            // 否则本进程每 2 秒的固定档位下发会把模式切换的效果盖掉。
+            int slot = Settings.FanProfileIndex;
+            if (slot != _slot)
+            {
+                _slot = slot;
+                _lastIdxCpu = _lastIdxGpu = _lastIdxSys = -1;
+            }
+
             var c = Curves(_slot);
             int cpu = PercentHysteresis(c.Item1, ct, ref _lastIdxCpu);
             int gpu = PercentHysteresis(c.Item2, gt, ref _lastIdxGpu);

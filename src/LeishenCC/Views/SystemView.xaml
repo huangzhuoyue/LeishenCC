@@ -81,16 +81,23 @@
                 <Border Height="1" Background="{DynamicResource Divider}" Margin="0,12,0,12" />
 
                 <TextBlock Text="按键与事件位对应（EventDetail）" Style="{StaticResource H2}" FontSize="14" />
-                <TextBlock Text="[0] 背光   [4] 外接显示   [5] 适配器   [6] 摄像头   [7] 性能模式键   [8] 控制中心键"
+                <TextBlock Text="[0] 背光   [4] 外接显示   [5] 适配器   [6] 摄像头   [7] 性能模式键(Fn+3)   [8] 控制中心键"
                            Style="{StaticResource Caption}" Margin="0,4,0,0" FontFamily="{StaticResource NumFont}" />
+                <TextBlock Text="WMI2Event [0x30] Fn+1 风扇键（data: >0=max / 0=normal）"
+                           Style="{StaticResource Caption}" Margin="0,2,0,0" FontFamily="{StaticResource NumFont}" />
                 <TextBlock x:Name="FnText" Text="最近按键：暂无" Style="{StaticResource Caption}" Margin="0,8,0,0"
+                           FontFamily="{StaticResource NumFont}" TextWrapping="Wrap" />
+                <TextBlock x:Name="FnHistoryText" Style="{StaticResource Caption}" Margin="0,6,0,0"
                            FontFamily="{StaticResource NumFont}" TextWrapping="Wrap" />
 
                 <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
-                    <Button Content="模拟性能键" Style="{StaticResource SubtleButton}" Click="FnPerf_Click" />
+                    <Button Content="模拟 Fn+3 模式键" Style="{StaticResource SubtleButton}" Click="FnPerf_Click" />
+                    <Button Content="模拟 Fn+1 风扇" Style="{StaticResource SubtleButton}" Margin="8,0,0,0" Click="FnFan_Click" />
                     <Button Content="模拟控制中心键" Style="{StaticResource SubtleButton}" Margin="8,0,0,0" Click="FnCc_Click" />
                     <Button Content="模拟摄像头键" Style="{StaticResource SubtleButton}" Margin="8,0,0,0" Click="FnCam_Click" />
                     <Button Content="模拟背光+" Style="{StaticResource SubtleButton}" Margin="8,0,0,0" Click="FnLight_Click" />
+                    <Button Content="重新订阅" Style="{StaticResource SubtleButton}" Margin="8,0,0,0" Click="FnResubscribe_Click" />
+                    <Button Content="清事件位" Style="{StaticResource SubtleButton}" Margin="8,0,0,0" Click="FnClear_Click" />
                 </StackPanel>
             </StackPanel>
         </Border>
@@ -99,6 +106,8 @@
             <StackPanel>
                 <TextBlock Text="设备信息" Style="{StaticResource H2}" FontSize="14" />
                 <TextBlock x:Name="InfoText" Style="{StaticResource Caption}" Margin="0,8,0,0" FontFamily="{StaticResource NumFont}" />
+                <TextBlock x:Name="DriverText" Style="{StaticResource Caption}" Margin="0,6,0,0"
+                           FontFamily="{StaticResource NumFont}" TextWrapping="Wrap" />
             </StackPanel>
         </Border>
 
